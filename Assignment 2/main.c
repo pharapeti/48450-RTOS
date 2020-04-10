@@ -70,13 +70,13 @@ typedef struct
 void initialiseData();
 
 /* This thread reads data from INPUT_FILE_NAME and writes each line to a pipe */
-void *Reader(ReadParams *params);
+void *Reader(void * params);
 
 /* This thread reads data from pipe used in Reader and writes it to a shared variable */
-void *Processor(ProcessorParams *params);
+void *Processor(void * params);
 
 /* This thread reads from shared variable and outputs non-header text to output.txt */
-void *Writer(WriterParams *params);
+void *Writer(void * params);
 
 pthread_t tid1, tid2, tid3;             // Thread ID
 sem_t sem_read, sem_process, sem_write; //Create semaphores
@@ -159,9 +159,11 @@ void initialiseData()
   return;
 }
 
-void *Reader(ReadParams *params)
+void *Reader(void * params)
 {
   printf("Reader\n");
+  ReadParams * parameters = params;
+
   char line[BUFFER_SIZE];
   FILE *readFile;
   char fileName[10] = INPUT_FILE_NAME;
@@ -175,17 +177,17 @@ void *Reader(ReadParams *params)
 
   while (!sem_wait(&sem_read) && fgets(line, BUFFER_SIZE, readFile) != NULL)
   {
-    if ((write(params->pipePrt[1], line, strlen(line) + 1) < 1))
+    if ((write(parameters->pipePrt[1], line, strlen(line) + 1) < 1))
     {
       perror("Write");
       exit(EXIT_FAILURE);
     }
 
-    params->lineNo++;
+    parameters->lineNo++;
     sem_post(&sem_process);
   }
 
-  close(params->pipePrt[1]);
+  close(parameters->pipePrt[1]);
   fclose(readFile);
 
   //Cancel threads - might not be the best way to do this
@@ -195,9 +197,11 @@ void *Reader(ReadParams *params)
   pthread_exit(0);
 }
 
-void *Processor(ProcessorParams *params)
+void *Processor(void *params)
 {
   printf("Processor\n");
+  ProcessorParams * parameters = params;
+
   enum fileRegion region = Header;
   char check[sizeof(char) * 13] = END_OF_HEADER;
 
@@ -206,7 +210,7 @@ void *Processor(ProcessorParams *params)
     char readBuffer[BUFFER_SIZE];
 
     // Read pipe and copy to readBuffer
-    if ((read(params->pipePrt[0], &readBuffer, BUFFER_SIZE) < 1))
+    if ((read(parameters->pipePrt[0], &readBuffer, BUFFER_SIZE) < 1))
     {
       perror("Read");
       exit(EXIT_FAILURE);
@@ -217,7 +221,7 @@ void *Processor(ProcessorParams *params)
     strncpy(fileLine.lineContent, readBuffer, sizeof(fileLine.lineContent) - 1);
 
     // Copy FileLine object to shared memory (between processor and writer)
-    *(params->shared_memory[params->lineNo]) = fileLine;
+    *(parameters->shared_memory[parameters->lineNo]) = fileLine;
 
     /* check whether this line is the end of header,
     the new line in array c contains "end_header\n"*/
@@ -229,13 +233,15 @@ void *Processor(ProcessorParams *params)
     sem_post(&sem_write);
   }
 
-  close(params->pipePrt[0]);
+  close(parameters->pipePrt[0]);
   pthread_exit(NULL);
 }
 
-void *Writer(WriterParams *params)
+void *Writer(void * params)
 {
   printf("Writer\n");
+  WriterParams * parameters = params;
+
   FILE *writeFile;
   char outputFileName[sizeof(char) * 11] = OUTPUT_FILE_NAME;
 
@@ -249,9 +255,9 @@ void *Writer(WriterParams *params)
   while (!sem_wait(&sem_write))
   {
     /* Writes lines in the Content region to the output file */
-    if (params->shared_memory[params->lineNo]->region == Content)
+    if (parameters->shared_memory[parameters->lineNo]->region == Content)
     {
-      fprintf(writeFile, "%s", params->shared_memory[params->lineNo]->lineContent);
+      fprintf(writeFile, "%s", parameters->shared_memory[parameters->lineNo]->lineContent);
     }
 
     sem_post(&sem_read);
