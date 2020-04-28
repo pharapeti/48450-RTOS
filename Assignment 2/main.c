@@ -69,34 +69,36 @@ typedef struct
 
 /* --- Prototypes --- */
 
-/* Initializes data and utilities used in thread params */
-void initialiseData();
+/* Initializes the three semaphores that are used to control the order of execution of the threads */
+void initialiseSempahores();
 
 /* Handles the Ctrl+C signal interrupt and safely exits the program */
 void handleInterupt();
 
-/* This thread reads data from input file and writes each row to a pipe */
+/* A thread which reads data from input file and writes each row to a pipe */
 void *Reader(void * params);
 
-/* This thread reads data from pipe used in Reader and writes it to a shared variable */
+/* A thread which reads data from pipe and writes it to a shared message */
 void *Processor(void * params);
 
-/* This thread reads from shared variable and outputs non-header text to the output file */
+/* A thread which reads from shared message and writes non-header text to the output file */
 void *Writer(void * params);
 
 pthread_t readerThreadID, processorThreadID, writerThreadID;    //Thread ID
 sem_t sem_read, sem_process, sem_write;                         //Create semaphores
 
-/* --- Main Code --- */
 int main(int argc, char const *argv[])
 {
+  /* Handles the Ctrl+C signal interrupt and safely exits the program */
+  signal(SIGINT, handleInterupt);
+
   // Ensure that the program has been invoked correctly
   if (argc < 1 || argc > 3) {
 		fprintf(stderr, "USAGE:\n./main.out\n./main.out <input file>\n./main.out <input file> <output file>\n");
-    exit(1);
+    exit(EXIT_FAILURE);
 	}
 
-  // Create default input and output file names
+  // Assign default input and output file names
   char inputFileName[MAX_ARGUMENT_LENGTH] = "data.txt";
   char outputFileName[MAX_ARGUMENT_LENGTH] = "output.txt";
 
@@ -106,7 +108,7 @@ int main(int argc, char const *argv[])
       if(strlen(argv[1]) > MAX_ARGUMENT_LENGTH){
         fprintf(stderr, "The <output file> specified exceeded %i characters.\n", MAX_ARGUMENT_LENGTH);
         fprintf(stderr, "Exiting program...\n");
-        exit(1);
+        exit(EXIT_FAILURE);
       }
 
       strncpy(inputFileName, argv[1], MAX_ARGUMENT_LENGTH);
@@ -115,12 +117,12 @@ int main(int argc, char const *argv[])
       if(strlen(argv[1]) > MAX_ARGUMENT_LENGTH){
         fprintf(stderr, "The <input file> specified exceeded %i characters.\n", MAX_ARGUMENT_LENGTH);
         fprintf(stderr, "Exiting program...\n");
-        exit(1);
+        exit(EXIT_FAILURE);
       }
       if(strlen(argv[2]) > MAX_ARGUMENT_LENGTH){
         fprintf(stderr, "The <output file> specified exceeded %i characters.\n", MAX_ARGUMENT_LENGTH);
         fprintf(stderr, "Exiting program...\n");
-        exit(1);
+        exit(EXIT_FAILURE);
       }
 
       strncpy(inputFileName, argv[1], MAX_ARGUMENT_LENGTH);
@@ -130,26 +132,27 @@ int main(int argc, char const *argv[])
       break;
   }
 
+  /* Initialisaton*/
   int rowNumber = 0;                //Track row number
   int pipeFileDescriptor[2];        //File descriptor for creating a pipe
   DataRow shared_memory[50];        //Create shared memory buffer
   pthread_attr_t threadAttributes;  //Create pthread thread attributes object
 
+  // Instantiate thread paramater structures for each thread
   ReadParams readParams = {rowNumber, inputFileName, pipeFileDescriptor};
   ProcessorParams processorParams = {rowNumber, pipeFileDescriptor, shared_memory};
   WriterParams writerParams = {rowNumber, outputFileName, shared_memory};
 
-  // Initialisation
-  initialiseData(NULL);
+  initialiseSempahores(NULL);
   pthread_attr_init(&threadAttributes);
 
-  // Create pipe
+  // Create pipe between Processor and Writer thread
   if (pipe(pipeFileDescriptor) < 0){
     perror("Pipe creation error");
     exit(EXIT_FAILURE);
   }
 
-  // Create Threads
+  // Create the Reader, Processor and Writer thread
   if (pthread_create(&readerThreadID, &threadAttributes, Reader, &readParams) != 0){
     perror("Error creating Reader thread");
     exit(EXIT_FAILURE);
@@ -162,9 +165,6 @@ int main(int argc, char const *argv[])
     perror("Error creating Writer thread");
     exit(EXIT_FAILURE);
   }
-
-  /* Handles the Ctrl+C signal interrupt and safely exits the program */
-  signal(SIGINT, handleInterupt);
 
   // Wait on threads to finish
   pthread_join(readerThreadID, NULL);
@@ -181,7 +181,7 @@ int main(int argc, char const *argv[])
   return 0;
 }
 
-void initialiseData()
+void initialiseSempahores()
 {
   printf("Initialising program...\n");
 
@@ -206,7 +206,7 @@ void initialiseData()
 
 void handleInterupt(int signalNumber){
   printf("Interrupt deteced: safely exiting program...\n");
-  exit(1);
+  exit(EXIT_FAILURE);
 }
 
 void *Reader(void * params)
