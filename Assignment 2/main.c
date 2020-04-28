@@ -23,6 +23,7 @@
 #include <semaphore.h>
 #include <sys/time.h>
 #include <errno.h>
+#include <signal.h>
 
 #define BUFFER_SIZE 1024
 #define INPUT_FILE_NAME "data.txt"
@@ -69,6 +70,9 @@ typedef struct
 
 /* Initializes data and utilities used in thread params */
 void initialiseData();
+
+/* Handles the Ctrl+C signal interrupt and safely exits the program */
+void handleInterupt();
 
 /* This thread reads data from INPUT_FILE_NAME and writes each row to a pipe */
 void *Reader(void * params);
@@ -118,12 +122,15 @@ int main(int argc, char const *argv[])
     exit(EXIT_FAILURE);
   }
 
+  /* Handles the Ctrl+C signal interrupt and safely exits the program */
+  signal(SIGINT, handleInterupt);
+
   // Wait on threads to finish
   pthread_join(readerThreadID, NULL);
   pthread_join(processorThreadID, NULL);
   pthread_join(writerThreadID, NULL);
 
-  printf("Output saved to %s\n", OUTPUT_FILE_NAME);
+  printf("The content region of %s has been saved to %s\n", INPUT_FILE_NAME, OUTPUT_FILE_NAME);
 
   //Close pipes
   close(pipeFileDescriptor[0]);
@@ -156,6 +163,11 @@ void initialiseData()
   return;
 }
 
+void handleInterupt(int signalNumber){
+  printf("Interrupt deteced: safely exiting program...\n");
+  exit(1);
+}
+
 void *Reader(void * params)
 {
   ReadParams * parameters = params;
@@ -163,13 +175,17 @@ void *Reader(void * params)
   FILE *readFile;
   char fileName[sizeof(INPUT_FILE_NAME)] = INPUT_FILE_NAME;
 
-  printf("Reading from %s\n", fileName);
-
   //Open file containing data
   if ((readFile = fopen(fileName, "r")) == NULL){
-    printf("Error! opening %s\n", fileName);
+    printf(
+      "Error: Could not find or open %s. Ensure that a file named %s exists within the same directory.\n",
+      fileName, fileName
+    );
+    printf("Exiting program...\n");
     exit(ENOENT); /* No such file or directory */
   }
+
+  printf("Reading from %s\n", fileName);
 
   while (!sem_wait(&sem_read) && fgets(row, BUFFER_SIZE, readFile) != NULL){
     //Write data from file to pipe between the Reader and Processor thread
