@@ -85,13 +85,10 @@ sem_t sem_read, sem_process, sem_write; //Create semaphores
 /* --- Main Code --- */
 int main(int argc, char const *argv[])
 {
-  struct timeval t1;
-  gettimeofday(&t1, NULL); // Start Timer
-  pthread_attr_t threadAttributes;
-
-  int rowNumber = 0;             //Track row number
-  int pipeFileDescriptor[2];  //File descriptor for creating a pipe
-  DataRow shared_memory[50]; //Create shared memory buffer
+  int rowNumber = 0;                //Track row number
+  int pipeFileDescriptor[2];        //File descriptor for creating a pipe
+  DataRow shared_memory[50];        //Create shared memory buffer
+  pthread_attr_t threadAttributes;  //Create pthread thread attributes object
 
   ReadParams readParams = {rowNumber, pipeFileDescriptor};
   ProcessorParams processorParams = {rowNumber, pipeFileDescriptor, shared_memory};
@@ -128,17 +125,17 @@ int main(int argc, char const *argv[])
 
   printf("Output saved to %s\n", OUTPUT_FILE_NAME);
 
-  //TODO: add your code
+  //Close pipes
   close(pipeFileDescriptor[0]);
   close(pipeFileDescriptor[1]);
 
-  printf("Done\n");
+  printf("Finished executing.\n");
   return 0;
 }
 
 void initialiseData()
 {
-  printf("Initialising...\n");
+  printf("Initialising program...\n");
 
   // Initialise Sempahores
   if (sem_init(&sem_read, 0, 1)){
@@ -164,17 +161,18 @@ void *Reader(void * params)
   ReadParams * parameters = params;
   char row[BUFFER_SIZE];
   FILE *readFile;
-  char fileName[10] = INPUT_FILE_NAME;
+  char fileName[sizeof(INPUT_FILE_NAME)] = INPUT_FILE_NAME;
 
   printf("Reading from %s\n", fileName);
 
-  //Open INPUT_FILE_NAME
+  //Open file containing data
   if ((readFile = fopen(fileName, "r")) == NULL){
     printf("Error! opening %s\n", fileName);
     exit(ENOENT); /* No such file or directory */
   }
 
   while (!sem_wait(&sem_read) && fgets(row, BUFFER_SIZE, readFile) != NULL){
+    //Write data from file to pipe between the Reader and Processor thread
     if ((write(parameters->pipePrt[1], row, strlen(row) + 1) < 1)){
       perror("Write");
       exit(EPIPE); /* Broken pipe */
@@ -209,8 +207,10 @@ void *Processor(void *params)
       exit(EPIPE); /* Broken pipe */
     }
 
-    // Instantiate DataRow object
+    // Instantiate DataRow object with the current value of region
     struct DataRow dataRow = {region};
+
+    //Copy data from read buffer to DataRow object
     strncpy(dataRow.content, readBuffer, sizeof(dataRow.content) - 1);
 
     // Copy DataRow object to shared memory that exists between processor and writer threads
@@ -246,7 +246,6 @@ void *Writer(void * params)
     if (parameters->shared_memory[parameters->rowNumber]->region == Content){
       fprintf(writeFile, "%s", parameters->shared_memory[parameters->rowNumber]->content);
     }
-
     sem_post(&sem_read);
   }
 
