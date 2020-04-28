@@ -48,21 +48,18 @@ typedef struct DataRow
 
 typedef struct
 {
-  int rowNumber;
   char * inputFileName;
   int * pipePrt;
 } ReadParams;
 
 typedef struct
 {
-  int rowNumber;
   int *pipePrt;
   DataRow * sharedBuffer;
 } ProcessorParams;
 
 typedef struct
 {
-  int rowNumber;
   char * outputFileName;
   DataRow * sharedBuffer;
 } WriterParams;
@@ -132,15 +129,14 @@ int main(int argc, char const *argv[])
   }
 
   /* Initialisaton*/
-  int rowNumber = 0;                //Track row number
   int pipeFileDescriptor[2];        //File descriptor for creating a pipe
   DataRow sharedBuffer;        //Create shared memory buffer
   pthread_attr_t threadAttributes;  //Create pthread thread attributes object
 
   // Instantiate thread paramater structures for each thread
-  ReadParams readParams = {rowNumber, inputFileName, pipeFileDescriptor};
-  ProcessorParams processorParams = {rowNumber, pipeFileDescriptor, &sharedBuffer};
-  WriterParams writerParams = {rowNumber, outputFileName, &sharedBuffer};
+  ReadParams readParams = {inputFileName, pipeFileDescriptor};
+  ProcessorParams processorParams = {pipeFileDescriptor, &sharedBuffer};
+  WriterParams writerParams = {outputFileName, &sharedBuffer};
 
   initialiseSempahores(NULL);
   pthread_attr_init(&threadAttributes);
@@ -199,7 +195,6 @@ void initialiseSempahores()
     perror("Error initializing write semaphore.");
     exit(EXIT_FAILURE);
   }
-
   return;
 }
 
@@ -232,8 +227,6 @@ void *Reader(void * params)
       perror("Write");
       exit(EPIPE); /* Broken pipe */
     }
-
-    parameters->rowNumber++;
     sem_post(&sem_process);
   }
 
