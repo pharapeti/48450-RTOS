@@ -118,8 +118,7 @@ int main(int argc, char const *argv[])
         fprintf(stderr, "The <input file> specified exceeded %i characters.\n", MAX_ARGUMENT_LENGTH);
         fprintf(stderr, "Exiting program...\n");
         exit(EXIT_FAILURE);
-      }
-      if(strlen(argv[2]) > MAX_ARGUMENT_LENGTH){
+      } else if(strlen(argv[2]) > MAX_ARGUMENT_LENGTH){
         fprintf(stderr, "The <output file> specified exceeded %i characters.\n", MAX_ARGUMENT_LENGTH);
         fprintf(stderr, "Exiting program...\n");
         exit(EXIT_FAILURE);
