@@ -199,7 +199,7 @@ void initialiseSempahores()
 }
 
 void handleInterupt(int signalNumber){
-  printf("Interrupt deteced: safely exiting program...\n");
+  printf("Interrupt detected: safely exiting program...\n");
   exit(EXIT_FAILURE);
 }
 
