@@ -26,8 +26,7 @@
 #include <signal.h>
 
 #define BUFFER_SIZE 1024
-#define INPUT_FILE_NAME "data.txt"
-#define OUTPUT_FILE_NAME "output.txt"
+#define MAX_ARGUMENT_LENGTH 100
 #define END_OF_HEADER "end_header"
 
 /* --- Structs --- */
@@ -50,6 +49,7 @@ typedef struct DataRow
 typedef struct
 {
   int rowNumber;
+  char * inputFileName;
   int * pipePrt;
 } ReadParams;
 
@@ -63,6 +63,7 @@ typedef struct
 typedef struct
 {
   int rowNumber;
+  char * outputFileName;
   DataRow * shared_memory[50];
 } WriterParams;
 
@@ -74,29 +75,67 @@ void initialiseData();
 /* Handles the Ctrl+C signal interrupt and safely exits the program */
 void handleInterupt();
 
-/* This thread reads data from INPUT_FILE_NAME and writes each row to a pipe */
+/* This thread reads data from input file and writes each row to a pipe */
 void *Reader(void * params);
 
 /* This thread reads data from pipe used in Reader and writes it to a shared variable */
 void *Processor(void * params);
 
-/* This thread reads from shared variable and outputs non-header text to output.txt */
+/* This thread reads from shared variable and outputs non-header text to the output file */
 void *Writer(void * params);
 
-pthread_t readerThreadID, processorThreadID, writerThreadID;             // Thread ID
-sem_t sem_read, sem_process, sem_write; //Create semaphores
+pthread_t readerThreadID, processorThreadID, writerThreadID;    //Thread ID
+sem_t sem_read, sem_process, sem_write;                         //Create semaphores
 
 /* --- Main Code --- */
 int main(int argc, char const *argv[])
 {
+  // Ensure that the program has been invoked correctly
+  if (argc < 1 || argc > 3) {
+		fprintf(stderr, "USAGE:\n./main.out\n./main.out <input file>\n./main.out <input file> <output file>\n");
+    exit(1);
+	}
+
+  // Create default input and output file names
+  char inputFileName[MAX_ARGUMENT_LENGTH] = "data.txt";
+  char outputFileName[MAX_ARGUMENT_LENGTH] = "output.txt";
+
+  // Override the default input and output file names if they have been specified by the user
+  switch(argc) {
+    case 2:
+        if(strlen(argv[1]) > MAX_ARGUMENT_LENGTH){
+            fprintf(stderr, "The <output file> specified exceeded %i characters.\n", MAX_ARGUMENT_LENGTH);
+            fprintf(stderr, "Exiting program...\n");
+            exit(1);
+        }
+        strncpy(inputFileName, argv[1], MAX_ARGUMENT_LENGTH);
+        break;
+    case 3:
+        if(strlen(argv[1]) > MAX_ARGUMENT_LENGTH){
+            fprintf(stderr, "The <input file> specified exceeded %i characters.\n", MAX_ARGUMENT_LENGTH);
+            fprintf(stderr, "Exiting program...\n");
+            exit(1);
+        }
+        if(strlen(argv[2]) > MAX_ARGUMENT_LENGTH){
+            fprintf(stderr, "The <output file> specified exceeded %i characters.\n", MAX_ARGUMENT_LENGTH);
+            fprintf(stderr, "Exiting program...\n");
+            exit(1);
+        }
+        strncpy(inputFileName, argv[1], MAX_ARGUMENT_LENGTH);
+        strncpy(outputFileName, argv[2], MAX_ARGUMENT_LENGTH);
+        break;
+    default:
+        break;
+  }
+
   int rowNumber = 0;                //Track row number
   int pipeFileDescriptor[2];        //File descriptor for creating a pipe
   DataRow shared_memory[50];        //Create shared memory buffer
   pthread_attr_t threadAttributes;  //Create pthread thread attributes object
 
-  ReadParams readParams = {rowNumber, pipeFileDescriptor};
+  ReadParams readParams = {rowNumber, inputFileName, pipeFileDescriptor};
   ProcessorParams processorParams = {rowNumber, pipeFileDescriptor, shared_memory};
-  WriterParams writerParams = {rowNumber, shared_memory};
+  WriterParams writerParams = {rowNumber, outputFileName, shared_memory};
 
   // Initialisation
   initialiseData(NULL);
@@ -130,13 +169,13 @@ int main(int argc, char const *argv[])
   pthread_join(processorThreadID, NULL);
   pthread_join(writerThreadID, NULL);
 
-  printf("The content region of %s has been saved to %s\n", INPUT_FILE_NAME, OUTPUT_FILE_NAME);
+  printf("The content region of %s has been saved to %s\n", inputFileName, outputFileName);
 
   //Close pipes
   close(pipeFileDescriptor[0]);
   close(pipeFileDescriptor[1]);
 
-  printf("Finished executing.\n");
+  printf("Exiting program...\n");
   return 0;
 }
 
@@ -173,19 +212,18 @@ void *Reader(void * params)
   ReadParams * parameters = params;
   char row[BUFFER_SIZE];
   FILE *readFile;
-  char fileName[sizeof(INPUT_FILE_NAME)] = INPUT_FILE_NAME;
 
-  //Open file containing data
-  if ((readFile = fopen(fileName, "r")) == NULL){
+  //Open the input file for reading
+  if ((readFile = fopen(parameters->inputFileName, "r")) == NULL){
     printf(
       "Error: Could not find or open %s. Ensure that a file named %s exists within the same directory.\n",
-      fileName, fileName
+      parameters->inputFileName, parameters->inputFileName
     );
     printf("Exiting program...\n");
     exit(ENOENT); /* No such file or directory */
   }
 
-  printf("Reading from %s\n", fileName);
+  printf("Reading from %s\n", parameters->inputFileName);
 
   while (!sem_wait(&sem_read) && fgets(row, BUFFER_SIZE, readFile) != NULL){
     //Write data from file to pipe between the Reader and Processor thread
@@ -197,6 +235,8 @@ void *Reader(void * params)
     parameters->rowNumber++;
     sem_post(&sem_process);
   }
+
+  printf("Finished reading %s\n", parameters->inputFileName);
 
   close(parameters->pipePrt[1]);
   fclose(readFile);
@@ -249,10 +289,9 @@ void *Writer(void * params)
 {
   WriterParams * parameters = params;
   FILE *writeFile;
-  char outputFileName[sizeof(OUTPUT_FILE_NAME)] = OUTPUT_FILE_NAME;
 
-  // Create or open the file we want to output the content to
-  if ((writeFile = fopen(outputFileName, "w")) == NULL){
+  // Create or open the output file we want to output the content to
+  if ((writeFile = fopen(parameters->outputFileName, "w")) == NULL){
     printf("Error! opening creating or opening existing output file\n");
     exit(EXIT_FAILURE);
   }
