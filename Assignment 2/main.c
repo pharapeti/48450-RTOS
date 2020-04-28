@@ -43,7 +43,7 @@ typedef struct DataRow
   enum fileRegion region;
 
   //The char array is used to store the content of the row read from the file
-  char content[255];
+  char content[BUFFER_SIZE];
 } DataRow;
 
 typedef struct
