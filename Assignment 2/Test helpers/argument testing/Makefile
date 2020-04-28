@@ -1,12 +1,11 @@
 # Makefile
-# Patrice Harapeti
+# Created by Patrice Harapeti
 
-# Uses the default compiler
-CFLAGS := -Wall -pthread
+CFLAGS := -Wall -pthread -O2
 
 EXECUTABLES := main
 
 all: $(EXECUTABLES)
 
 clean:
-	@rm -vf $(EXECUTABLES) output.txt
+	@rm -vf $(EXECUTABLES) output.txt out.txt
