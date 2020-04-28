@@ -103,29 +103,31 @@ int main(int argc, char const *argv[])
   // Override the default input and output file names if they have been specified by the user
   switch(argc) {
     case 2:
-        if(strlen(argv[1]) > MAX_ARGUMENT_LENGTH){
-            fprintf(stderr, "The <output file> specified exceeded %i characters.\n", MAX_ARGUMENT_LENGTH);
-            fprintf(stderr, "Exiting program...\n");
-            exit(1);
-        }
-        strncpy(inputFileName, argv[1], MAX_ARGUMENT_LENGTH);
-        break;
+      if(strlen(argv[1]) > MAX_ARGUMENT_LENGTH){
+        fprintf(stderr, "The <output file> specified exceeded %i characters.\n", MAX_ARGUMENT_LENGTH);
+        fprintf(stderr, "Exiting program...\n");
+        exit(1);
+      }
+
+      strncpy(inputFileName, argv[1], MAX_ARGUMENT_LENGTH);
+      break;
     case 3:
-        if(strlen(argv[1]) > MAX_ARGUMENT_LENGTH){
-            fprintf(stderr, "The <input file> specified exceeded %i characters.\n", MAX_ARGUMENT_LENGTH);
-            fprintf(stderr, "Exiting program...\n");
-            exit(1);
-        }
-        if(strlen(argv[2]) > MAX_ARGUMENT_LENGTH){
-            fprintf(stderr, "The <output file> specified exceeded %i characters.\n", MAX_ARGUMENT_LENGTH);
-            fprintf(stderr, "Exiting program...\n");
-            exit(1);
-        }
-        strncpy(inputFileName, argv[1], MAX_ARGUMENT_LENGTH);
-        strncpy(outputFileName, argv[2], MAX_ARGUMENT_LENGTH);
-        break;
+      if(strlen(argv[1]) > MAX_ARGUMENT_LENGTH){
+        fprintf(stderr, "The <input file> specified exceeded %i characters.\n", MAX_ARGUMENT_LENGTH);
+        fprintf(stderr, "Exiting program...\n");
+        exit(1);
+      }
+      if(strlen(argv[2]) > MAX_ARGUMENT_LENGTH){
+        fprintf(stderr, "The <output file> specified exceeded %i characters.\n", MAX_ARGUMENT_LENGTH);
+        fprintf(stderr, "Exiting program...\n");
+        exit(1);
+      }
+
+      strncpy(inputFileName, argv[1], MAX_ARGUMENT_LENGTH);
+      strncpy(outputFileName, argv[2], MAX_ARGUMENT_LENGTH);
+      break;
     default:
-        break;
+      break;
   }
 
   int rowNumber = 0;                //Track row number
