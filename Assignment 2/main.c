@@ -57,14 +57,14 @@ typedef struct
 {
   int rowNumber;
   int *pipePrt;
-  DataRow * shared_memory[50];
+  DataRow * sharedBuffer;
 } ProcessorParams;
 
 typedef struct
 {
   int rowNumber;
   char * outputFileName;
-  DataRow * shared_memory[50];
+  DataRow * sharedBuffer;
 } WriterParams;
 
 /* --- Prototypes --- */
@@ -134,13 +134,13 @@ int main(int argc, char const *argv[])
   /* Initialisaton*/
   int rowNumber = 0;                //Track row number
   int pipeFileDescriptor[2];        //File descriptor for creating a pipe
-  DataRow shared_memory[50];        //Create shared memory buffer
+  DataRow sharedBuffer;        //Create shared memory buffer
   pthread_attr_t threadAttributes;  //Create pthread thread attributes object
 
   // Instantiate thread paramater structures for each thread
   ReadParams readParams = {rowNumber, inputFileName, pipeFileDescriptor};
-  ProcessorParams processorParams = {rowNumber, pipeFileDescriptor, shared_memory};
-  WriterParams writerParams = {rowNumber, outputFileName, shared_memory};
+  ProcessorParams processorParams = {rowNumber, pipeFileDescriptor, &sharedBuffer};
+  WriterParams writerParams = {rowNumber, outputFileName, &sharedBuffer};
 
   initialiseSempahores(NULL);
   pthread_attr_init(&threadAttributes);
@@ -271,7 +271,7 @@ void *Processor(void *params)
     strncpy(dataRow.content, readBuffer, sizeof(dataRow.content) - 1);
 
     // Copy DataRow object to shared memory that exists between processor and writer threads
-    *(parameters->shared_memory[parameters->rowNumber]) = dataRow;
+    *(parameters->sharedBuffer) = dataRow;
 
     /* Check whether this row is the end of header,
     the new row in array c contains "end_header\n"*/
@@ -299,8 +299,8 @@ void *Writer(void * params)
 
   while (!sem_wait(&sem_write)){
     /* Writes rows in the Content region to the output file */
-    if (parameters->shared_memory[parameters->rowNumber]->region == Content){
-      fprintf(writeFile, "%s", parameters->shared_memory[parameters->rowNumber]->content);
+    if (parameters->sharedBuffer->region == Content){
+      fprintf(writeFile, "%s", parameters->sharedBuffer->content);
     }
     sem_post(&sem_read);
   }
