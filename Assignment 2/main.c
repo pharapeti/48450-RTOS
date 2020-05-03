@@ -162,9 +162,15 @@ int main(int argc, char const *argv[])
   }
 
   // Wait on threads to finish
-  pthread_join(readerThreadID, NULL);
-  pthread_join(processorThreadID, NULL);
-  pthread_join(writerThreadID, NULL);
+  if(pthread_join(readerThreadID, NULL) != 0){
+    perror("Error joining Reader thread");
+  }
+  if(pthread_join(processorThreadID, NULL) != 0){
+    perror("Error joining Processor thread");
+  }
+  if(pthread_join(writerThreadID, NULL) != 0){
+    perror("Error joining Writer thread");
+  }
 
   printf("The content region of %s has been saved to %s\n", inputFileName, outputFileName);
 
@@ -236,9 +242,15 @@ void *Reader(void * params)
   fclose(readFile);
 
   //Cancel threads - might not be the best way to do this
-  pthread_cancel(readerThreadID);
-  pthread_cancel(processorThreadID);
-  pthread_cancel(writerThreadID);
+  if(pthread_cancel(readerThreadID) != 0){
+    perror("Issue cancelling Reader thread");
+  }
+  if(pthread_cancel(processorThreadID) != 0){
+    perror("Issue cancelling Processor thread");
+  }
+  if(pthread_cancel(writerThreadID) != 0){
+    perror("Issue cancelling Writer thread");
+  }
   pthread_exit(0);
 }
 
