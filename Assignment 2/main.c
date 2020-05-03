@@ -1,15 +1,9 @@
-/***********************************************************************************/
-//***********************************************************************************
-//            *************NOTE**************
-// This is a template for the subject of RTOS in University of Technology Sydney(UTS)
-// Please complete the code based on the assignment requirement.
-
-//***********************************************************************************
-/***********************************************************************************/
-
 /*
-  To compile main.c ensure that gcc is installed and run the following command:
-  gcc main.c -o main -pthread
+  To compile main.c, ensure that gcc and make is installed. Then run the following command:
+  make
+
+  To delete the executable and output files created by this program, run the following command:
+  make clean
 */
 
 #include <pthread.h>
@@ -265,7 +259,7 @@ void *Processor(void *params)
 
     // Read pipe and copy to readBuffer
     if ((read(parameters->pipePrt[0], &readBuffer, BUFFER_SIZE) < 1)){
-      perror("Read");
+      perror("Error reading from the pipe");
       exit(EPIPE); /* Broken pipe */
     }
 
