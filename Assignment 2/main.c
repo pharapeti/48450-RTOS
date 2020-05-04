@@ -95,6 +95,7 @@ void *Processor(void * params);
 void *Writer(void * params);
 
 pthread_t readerThreadID, processorThreadID, writerThreadID;    //Thread ID
+int dataInFile; //Simple flag to track whether the input file contains any data
 
 int main(int argc, char const *argv[])
 {
@@ -185,11 +186,11 @@ int main(int argc, char const *argv[])
     perror("Error joining Writer thread");
   }
 
-  printf("The content region of %s has been saved to %s\n", inputFileName, outputFileName);
-
-  //Close pipes
-  close(pipeFileDescriptor[0]);
-  close(pipeFileDescriptor[1]);
+  if(dataInFile){
+     printf("The content region of %s has been saved to %s\n", inputFileName, outputFileName);
+  } else {
+    printf("%s was empty\n", inputFileName);
+  }
 
   printf("Exiting program...\n");
   return 0;
@@ -242,28 +243,31 @@ void *Reader(void * params)
   printf("Reading from %s\n", parameters->inputFileName);
 
   while (!sem_wait(parameters->read) && fgets(row, BUFFER_SIZE, readFile) != NULL){
+    dataInFile = 1;
     //Write data from file to pipe between the Reader and Processor thread
     if ((write(parameters->pipePrt[1], row, strlen(row) + 1) < 1)){
-      perror("Write");
+      perror("Error writing to pipe");
       exit(EPIPE); /* Broken pipe */
     }
     sem_post(parameters->process);
   }
 
-  printf("Finished reading %s\n", parameters->inputFileName);
-
-  close(parameters->pipePrt[1]);
-  fclose(readFile);
+  if(close(parameters->pipePrt[1]) != 0){
+    fprintf(stderr, "Error closing pipe: %s\n", strerror(errno));
+  }
+  if(fclose(readFile) == EOF){
+    fprintf(stderr, "Error closing input file: %s\n", strerror(errno));
+  }
 
   //Cancel threads - might not be the best way to do this
   if(pthread_cancel(readerThreadID) != 0){
-    perror("Issue cancelling Reader thread");
+    perror("Error cancelling Reader thread");
   }
   if(pthread_cancel(processorThreadID) != 0){
-    perror("Issue cancelling Processor thread");
+    perror("Error cancelling Processor thread");
   }
   if(pthread_cancel(writerThreadID) != 0){
-    perror("Issue cancelling Writer thread");
+    perror("Error cancelling Writer thread");
   }
   pthread_exit(0);
 }
@@ -299,7 +303,9 @@ void *Processor(void *params)
     sem_post(parameters->write);
   }
 
-  close(parameters->pipePrt[0]);
+  if(close(parameters->pipePrt[0]) != 0){
+    fprintf(stderr, "Error closing pipe: %s\n", strerror(errno));
+  }
   pthread_exit(NULL);
 }
 
@@ -322,6 +328,8 @@ void *Writer(void * params)
     sem_post(parameters->read);
   }
 
-  fclose(writeFile);
+  if(fclose(writeFile) == EOF){
+    fprintf(stderr, "Error closing input file: %s\n", strerror(errno));
+  }
   pthread_exit(NULL);
 }
