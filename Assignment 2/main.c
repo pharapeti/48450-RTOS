@@ -9,6 +9,7 @@
   ./main
   ./main <input file name>
   ./main <input file name> <output file name>
+  ./main <input file name> <output file name> <substring>
   note: arguments are restricted to a maximum of 100 characters each
 */
 
@@ -102,7 +103,11 @@ int main(int argc, char const *argv[])
 
   // Ensure that the program has been invoked correctly
   if (argc < 1 || argc > 4) {
-		fprintf(stderr, "USAGE:\n./main.out\n./main.out <input file>\n./main.out <input file> <output file>\n");
+		fprintf(stderr, "USAGE:\n");
+    fprintf(stderr, "./main.out\n");
+    fprintf(stderr, "./main.out <input file>\n");
+    fprintf(stderr, "./main.out <input file> <output file>\n");
+    fprintf(stderr, "./main.out <input file> <output file> <substring>\n");
     exit(EXIT_FAILURE);
 	}
 
