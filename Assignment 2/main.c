@@ -4,6 +4,12 @@
 
   To delete the executable and output files created by this program, run the following command:
   make clean
+
+  To run the program, you must use one of the following conventions:
+  ./main
+  ./main <input file name>
+  ./main <input file name> <output file name>
+  note: arguments are restricted to a maximum of 100 characters each
 */
 
 #include <pthread.h>
