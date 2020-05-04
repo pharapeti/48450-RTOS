@@ -42,26 +42,39 @@ typedef struct DataRow
 
 typedef struct
 {
+  sem_t * sem_read;
+  sem_t * sem_process;
+  sem_t * sem_write;
+} SemaphoreParams;
+
+typedef struct
+{
   char * inputFileName;
   int * pipePrt;
+  sem_t * read;
+  sem_t * process;
 } ReadParams;
 
 typedef struct
 {
   int *pipePrt;
   DataRow * sharedBuffer;
+  sem_t * process;
+  sem_t * write;
 } ProcessorParams;
 
 typedef struct
 {
   char * outputFileName;
   DataRow * sharedBuffer;
+  sem_t * write;
+  sem_t * read;
 } WriterParams;
 
 /* --- Prototypes --- */
 
 /* Initializes the three semaphores that are used to control the order of execution of the threads */
-void initialiseSempahores();
+void initialiseSempahores(void * params);
 
 /* Handles the Ctrl+C signal interrupt and safely exits the program */
 void handleInterupt();
@@ -76,7 +89,6 @@ void *Processor(void * params);
 void *Writer(void * params);
 
 pthread_t readerThreadID, processorThreadID, writerThreadID;    //Thread ID
-sem_t sem_read, sem_process, sem_write;                         //Create semaphores
 
 int main(int argc, char const *argv[])
 {
@@ -123,16 +135,18 @@ int main(int argc, char const *argv[])
   }
 
   /* Initialisaton*/
-  int pipeFileDescriptor[2];        //File descriptor for creating a pipe
-  DataRow sharedBuffer;        //Create shared memory buffer
-  pthread_attr_t threadAttributes;  //Create pthread thread attributes object
+  int pipeFileDescriptor[2];              //File descriptor for creating a pipe
+  DataRow sharedBuffer;                   //Create shared memory buffer
+  pthread_attr_t threadAttributes;        //Create pthread thread attributes object
+  sem_t sem_read, sem_process, sem_write; //Create semaphores
 
   // Instantiate thread paramater structures for each thread
-  ReadParams readParams = {inputFileName, pipeFileDescriptor};
-  ProcessorParams processorParams = {pipeFileDescriptor, &sharedBuffer};
-  WriterParams writerParams = {outputFileName, &sharedBuffer};
+  SemaphoreParams semParams = {&sem_read, &sem_process, &sem_write};
+  ReadParams readParams = {inputFileName, pipeFileDescriptor, &sem_read, &sem_process};
+  ProcessorParams processorParams = {pipeFileDescriptor, &sharedBuffer, &sem_process, &sem_write};
+  WriterParams writerParams = {outputFileName, &sharedBuffer, &sem_write, &sem_read};
 
-  initialiseSempahores(NULL);
+  initialiseSempahores(&semParams);
   pthread_attr_init(&threadAttributes);
 
   // Create pipe between Processor and Writer thread
@@ -176,22 +190,23 @@ int main(int argc, char const *argv[])
   return 0;
 }
 
-void initialiseSempahores()
+void initialiseSempahores(void * params)
 {
+  SemaphoreParams * parameters = params;
   printf("Initialising program...\n");
 
   // Initialise Sempahores
-  if (sem_init(&sem_read, 0, 1)){
+  if (sem_init(parameters->sem_read, 0, 1)){
     perror("Error initializing read semaphore.");
     exit(EXIT_FAILURE);
   }
 
-  if (sem_init(&sem_process, 0, 0)){
+  if (sem_init(parameters->sem_process, 0, 0)){
     perror("Error initializing process semaphore.");
     exit(EXIT_FAILURE);
   }
 
-  if (sem_init(&sem_write, 0, 0)){
+  if (sem_init(parameters->sem_write, 0, 0)){
     perror("Error initializing write semaphore.");
     exit(EXIT_FAILURE);
   }
@@ -221,13 +236,13 @@ void *Reader(void * params)
 
   printf("Reading from %s\n", parameters->inputFileName);
 
-  while (!sem_wait(&sem_read) && fgets(row, BUFFER_SIZE, readFile) != NULL){
+  while (!sem_wait(parameters->read) && fgets(row, BUFFER_SIZE, readFile) != NULL){
     //Write data from file to pipe between the Reader and Processor thread
     if ((write(parameters->pipePrt[1], row, strlen(row) + 1) < 1)){
       perror("Write");
       exit(EPIPE); /* Broken pipe */
     }
-    sem_post(&sem_process);
+    sem_post(parameters->process);
   }
 
   printf("Finished reading %s\n", parameters->inputFileName);
@@ -254,7 +269,7 @@ void *Processor(void *params)
   enum fileRegion region = Header;
   char headerRow[sizeof(END_OF_HEADER)] = END_OF_HEADER;
 
-  while (!sem_wait(&sem_process)){
+  while (!sem_wait(parameters->process)){
     char readBuffer[BUFFER_SIZE];
 
     // Read pipe and copy to readBuffer
@@ -278,7 +293,7 @@ void *Processor(void *params)
       region = Content;
     }
 
-    sem_post(&sem_write);
+    sem_post(parameters->write);
   }
 
   close(parameters->pipePrt[0]);
@@ -296,12 +311,12 @@ void *Writer(void * params)
     exit(EXIT_FAILURE);
   }
 
-  while (!sem_wait(&sem_write)){
+  while (!sem_wait(parameters->write)){
     /* Writes rows in the Content region to the output file */
     if (parameters->sharedBuffer->region == Content){
       fprintf(writeFile, "%s", parameters->sharedBuffer->content);
     }
-    sem_post(&sem_read);
+    sem_post(parameters->read);
   }
 
   fclose(writeFile);
