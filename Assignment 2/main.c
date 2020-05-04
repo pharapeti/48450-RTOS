@@ -21,7 +21,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <semaphore.h>
-#include <sys/time.h>
 #include <errno.h>
 #include <signal.h>
 
