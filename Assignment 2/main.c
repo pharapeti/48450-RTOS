@@ -26,7 +26,6 @@
 
 #define BUFFER_SIZE 1024
 #define MAX_ARGUMENT_LENGTH 100
-#define END_OF_HEADER "end_header"
 
 /* --- Structs --- */
 typedef enum fileRegion
@@ -62,6 +61,7 @@ typedef struct
 
 typedef struct
 {
+  char * substring;
   int *pipePrt;
   DataRow * sharedBuffer;
   sem_t * process;
@@ -101,7 +101,7 @@ int main(int argc, char const *argv[])
   signal(SIGINT, handleInterupt);
 
   // Ensure that the program has been invoked correctly
-  if (argc < 1 || argc > 3) {
+  if (argc < 1 || argc > 4) {
 		fprintf(stderr, "USAGE:\n./main.out\n./main.out <input file>\n./main.out <input file> <output file>\n");
     exit(EXIT_FAILURE);
 	}
@@ -109,34 +109,29 @@ int main(int argc, char const *argv[])
   // Assign default input and output file names
   char inputFileName[MAX_ARGUMENT_LENGTH] = "data.txt";
   char outputFileName[MAX_ARGUMENT_LENGTH] = "output.txt";
+  char substring[MAX_ARGUMENT_LENGTH] = "end_header";
 
-  // Override the default input and output file names if they have been specified by the user
-  switch(argc) {
-    case 2:
-      if(strlen(argv[1]) > MAX_ARGUMENT_LENGTH){
-        fprintf(stderr, "The <output file> specified exceeded %i characters.\n", MAX_ARGUMENT_LENGTH);
-        fprintf(stderr, "Exiting program...\n");
-        exit(EXIT_FAILURE);
+  // Override the default input and output file names if they have been specified by the user 
+  for(int i = 1; i < argc; i++){
+    if(strlen(argv[i]) > MAX_ARGUMENT_LENGTH){
+      fprintf(stderr, "Argument number %i exceeds %i characters.\n", i, MAX_ARGUMENT_LENGTH);
+      fprintf(stderr, "Exiting program...\n");
+      exit(EXIT_FAILURE);
+    } else {
+      switch(i){
+        case 1:
+          strncpy(inputFileName, argv[1], MAX_ARGUMENT_LENGTH);
+          break;
+        case 2:
+          strncpy(outputFileName, argv[2], MAX_ARGUMENT_LENGTH);
+          break;
+        case 3:
+          strncpy(substring, argv[3], MAX_ARGUMENT_LENGTH);
+          break;
+        default:
+          break;
       }
-
-      strncpy(inputFileName, argv[1], MAX_ARGUMENT_LENGTH);
-      break;
-    case 3:
-      if(strlen(argv[1]) > MAX_ARGUMENT_LENGTH){
-        fprintf(stderr, "The <input file> specified exceeded %i characters.\n", MAX_ARGUMENT_LENGTH);
-        fprintf(stderr, "Exiting program...\n");
-        exit(EXIT_FAILURE);
-      } else if(strlen(argv[2]) > MAX_ARGUMENT_LENGTH){
-        fprintf(stderr, "The <output file> specified exceeded %i characters.\n", MAX_ARGUMENT_LENGTH);
-        fprintf(stderr, "Exiting program...\n");
-        exit(EXIT_FAILURE);
-      }
-
-      strncpy(inputFileName, argv[1], MAX_ARGUMENT_LENGTH);
-      strncpy(outputFileName, argv[2], MAX_ARGUMENT_LENGTH);
-      break;
-    default:
-      break;
+    }
   }
 
   /* Initialisaton*/
@@ -148,7 +143,7 @@ int main(int argc, char const *argv[])
   // Instantiate thread paramater structures for each thread
   SemaphoreParams semParams = {&sem_read, &sem_process, &sem_write};
   ReadParams readParams = {inputFileName, pipeFileDescriptor, &sem_read, &sem_process};
-  ProcessorParams processorParams = {pipeFileDescriptor, &sharedBuffer, &sem_process, &sem_write};
+  ProcessorParams processorParams = {substring, pipeFileDescriptor, &sharedBuffer, &sem_process, &sem_write};
   WriterParams writerParams = {outputFileName, &sharedBuffer, &sem_write, &sem_read};
 
   initialiseSempahores(&semParams);
@@ -272,7 +267,6 @@ void *Processor(void *params)
 {
   ProcessorParams * parameters = params;
   enum fileRegion region = Header;
-  char headerRow[sizeof(END_OF_HEADER)] = END_OF_HEADER;
 
   while (!sem_wait(parameters->process)){
     char readBuffer[BUFFER_SIZE];
@@ -292,9 +286,8 @@ void *Processor(void *params)
     // Copy DataRow object to shared memory that exists between processor and writer threads
     *(parameters->sharedBuffer) = dataRow;
 
-    /* Check whether this row is the end of header,
-    the new row in array c contains "end_header\n"*/
-    if (region == Header && strstr(readBuffer, headerRow) != NULL){
+    /* Check contains the substring. If it does, we update the region  */
+    if (region == Header && strstr(readBuffer, parameters->substring) != NULL){
       region = Content;
     }
 
