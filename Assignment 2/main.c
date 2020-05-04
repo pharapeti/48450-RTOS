@@ -96,6 +96,7 @@ void *Writer(void * params);
 
 pthread_t readerThreadID, processorThreadID, writerThreadID;    //Thread ID
 int dataInFile; //Simple flag to track whether the input file contains any data
+int substringFound; //Simple flag to track whether the substring was found in the input file
 
 int main(int argc, char const *argv[])
 {
@@ -187,7 +188,11 @@ int main(int argc, char const *argv[])
   }
 
   if(dataInFile){
-     printf("The content region of %s has been saved to %s\n", inputFileName, outputFileName);
+    if(substringFound){
+      printf("The content region of %s has been saved to %s\n", inputFileName, outputFileName);
+    } else {
+      printf("The substring '%s' was not found in %s\n", substring, inputFileName);
+    }
   } else {
     printf("%s was empty\n", inputFileName);
   }
@@ -298,6 +303,7 @@ void *Processor(void *params)
     /* Check contains the substring. If it does, we update the region  */
     if (region == Header && strstr(readBuffer, parameters->substring) != NULL){
       region = Content;
+      substringFound = 1;
     }
 
     sem_post(parameters->write);
