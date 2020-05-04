@@ -95,8 +95,11 @@ void *Processor(void * params);
 void *Writer(void * params);
 
 pthread_t readerThreadID, processorThreadID, writerThreadID;    //Thread ID
-int dataInFile; //Simple flag to track whether the input file contains any data
-int substringFound; //Simple flag to track whether the substring was found in the input file
+
+/* Global flags */
+int dataInFile; //To track whether the input file contains any data
+int substringFound; //To track whether the substring was found in the input file
+int safelyTerminate; //To track whether the user has interrupted the program
 
 int main(int argc, char const *argv[])
 {
@@ -187,14 +190,18 @@ int main(int argc, char const *argv[])
     perror("Error joining Writer thread");
   }
 
-  if(dataInFile){
-    if(substringFound){
-      printf("The content region of %s has been saved to %s\n", inputFileName, outputFileName);
+  // If the program was not terminated by the user
+  // Print a final message to indicate how the program performed
+  if(!safelyTerminate){
+    if(dataInFile){
+      if(substringFound){
+        printf("The content region of %s has been saved to %s\n", inputFileName, outputFileName);
+      } else {
+        printf("The substring '%s' was not found in %s\n", substring, inputFileName);
+      }
     } else {
-      printf("The substring '%s' was not found in %s\n", substring, inputFileName);
+      printf("%s was empty\n", inputFileName);
     }
-  } else {
-    printf("%s was empty\n", inputFileName);
   }
 
   printf("Exiting program...\n");
@@ -225,8 +232,13 @@ void initialiseSempahores(void * params)
 }
 
 void handleInterupt(int signalNumber){
-  printf("Interrupt detected: safely exiting program...\n");
-  exit(EXIT_FAILURE);
+  // Termine the program the Ctrl+C interrupt is raised more than once
+  if(safelyTerminate){
+    exit(EXIT_FAILURE);
+  } else {
+    printf("Interrupt detected: safely exiting program...\n");
+    safelyTerminate = 1;
+  }
 }
 
 void *Reader(void * params)
@@ -247,7 +259,7 @@ void *Reader(void * params)
 
   printf("Reading from %s\n", parameters->inputFileName);
 
-  while (!sem_wait(parameters->read) && fgets(row, BUFFER_SIZE, readFile) != NULL){
+  while (!safelyTerminate && !sem_wait(parameters->read) && fgets(row, BUFFER_SIZE, readFile) != NULL){
     dataInFile = 1;
     //Write data from file to pipe between the Reader and Processor thread
     if ((write(parameters->pipePrt[1], row, strlen(row) + 1) < 1)){
@@ -264,7 +276,8 @@ void *Reader(void * params)
     fprintf(stderr, "Error closing input file: %s\n", strerror(errno));
   }
 
-  //Cancel threads - might not be the best way to do this
+  //Send a cancellation request to all other threads
+  //This means that the threads will perform their cleanup tasks and then return
   if(pthread_cancel(readerThreadID) != 0){
     perror("Error cancelling Reader thread");
   }
@@ -282,7 +295,7 @@ void *Processor(void *params)
   ProcessorParams * parameters = params;
   enum fileRegion region = Header;
 
-  while (!sem_wait(parameters->process)){
+  while (!safelyTerminate && !sem_wait(parameters->process)){
     char readBuffer[BUFFER_SIZE];
 
     // Read pipe and copy to readBuffer
@@ -326,7 +339,7 @@ void *Writer(void * params)
     exit(EXIT_FAILURE);
   }
 
-  while (!sem_wait(parameters->write)){
+  while (!safelyTerminate && !sem_wait(parameters->write)){
     /* Writes rows in the Content region to the output file */
     if (parameters->sharedBuffer->region == Content){
       fprintf(writeFile, "%s", parameters->sharedBuffer->content);
