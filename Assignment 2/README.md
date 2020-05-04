@@ -1,2 +1,3 @@
 ### TODO
-1. Better error handling (I should be terminating threads and closing files when Ctrl+c is raised)
+1. Update the report to reflect new changes
+2. Submit this bad boy
