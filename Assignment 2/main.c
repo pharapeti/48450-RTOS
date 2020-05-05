@@ -24,6 +24,7 @@
 #include <semaphore.h>
 #include <errno.h>
 #include <signal.h>
+#include <stdbool.h>
 
 #define BUFFER_SIZE 1024
 #define MAX_ARGUMENT_LENGTH 100
@@ -97,9 +98,9 @@ void *Writer(void * params);
 pthread_t readerThreadID, processorThreadID, writerThreadID;    //Thread ID
 
 /* Global flags */
-int dataInFile; //To track whether the input file contains any data
-int substringFound; //To track whether the substring was found in the input file
-int safelyTerminate; //To track whether the user has interrupted the program
+bool dataInFile; //To track whether the input file contains any data
+bool substringFound; //To track whether the substring was found in the input file
+bool safelyTerminate; //To track whether the user has interrupted the program
 
 int main(int argc, char const *argv[])
 {
@@ -237,7 +238,7 @@ void handleInterupt(int signalNumber){
     exit(EXIT_FAILURE);
   } else {
     printf("Interrupt detected: safely exiting program...\n");
-    safelyTerminate = 1;
+    safelyTerminate = true;
   }
 }
 
@@ -260,7 +261,7 @@ void *Reader(void * params)
   printf("Reading from %s\n", parameters->inputFileName);
 
   while (!safelyTerminate && !sem_wait(parameters->read) && fgets(row, BUFFER_SIZE, readFile) != NULL){
-    dataInFile = 1;
+    dataInFile = true;
     //Write data from file to pipe between the Reader and Processor thread
     if ((write(parameters->pipePrt[1], row, strlen(row) + 1) < 1)){
       perror("Error writing to pipe");
@@ -316,7 +317,7 @@ void *Processor(void *params)
     /* Check contains the substring. If it does, we update the region  */
     if (region == Header && strstr(readBuffer, parameters->substring) != NULL){
       region = Content;
-      substringFound = 1;
+      substringFound = true;
     }
 
     sem_post(parameters->write);
