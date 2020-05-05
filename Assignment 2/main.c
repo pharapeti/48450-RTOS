@@ -28,6 +28,9 @@
 
 #define BUFFER_SIZE 1024
 #define MAX_ARGUMENT_LENGTH 100
+#define DEFAULT_INPUT_FILENAME "data.txt"
+#define DEFAULT_OUTPUT_FILENAME "output.txt"
+#define DEFAULT_SUBSTRING "end_header"
 
 /* --- Structs --- */
 typedef enum fileRegion
@@ -118,9 +121,9 @@ int main(int argc, char const *argv[])
 	}
 
   // Assign default input and output file names
-  char inputFileName[MAX_ARGUMENT_LENGTH] = "data.txt";
-  char outputFileName[MAX_ARGUMENT_LENGTH] = "output.txt";
-  char substring[MAX_ARGUMENT_LENGTH] = "end_header";
+  char inputFileName[MAX_ARGUMENT_LENGTH] = DEFAULT_INPUT_FILENAME;
+  char outputFileName[MAX_ARGUMENT_LENGTH] = DEFAULT_OUTPUT_FILENAME;
+  char substring[MAX_ARGUMENT_LENGTH] = DEFAULT_SUBSTRING;
 
   // Override the default input and output file names if they have been specified by the user 
   for(int i = 1; i < argc; i++){
