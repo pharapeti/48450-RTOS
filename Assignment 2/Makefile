@@ -1,5 +1,5 @@
 # Makefile
-# By Patrice Harapeti
+# By Patrice Harapeti and Derek Karapetian
 
 CFLAGS := -Wall -pthread -O2
 
