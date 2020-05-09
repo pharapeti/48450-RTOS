@@ -1,11 +1,15 @@
 # Makefile
 # By Patrice Harapeti
 
+CC = gcc
 CFLAGS := -Wall -pthread -O2
+OBJFILES = fifo.c program_2.c
+TARGET = program_2
 
-EXECUTABLES := Program_1 Program_2
+all: $(TARGET)
 
-all: $(EXECUTABLES)
+$(TARGET): $(OBJFILES)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJFILES)
 
 clean:
-	@rm -vf $(EXECUTABLES) output.txt
+	@rm -vf $(OBJFILES) $(TARGET) output.txt

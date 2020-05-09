@@ -9,7 +9,6 @@ Assignment 3 Program_2 template
 **********************************************************************************/
 /*
   To compile prog_1 ensure that gcc is installed and run the following command:
-  gcc -Wall -O2 program_1.c -o prog_1 -lpthread -lrt
 
 */
 
