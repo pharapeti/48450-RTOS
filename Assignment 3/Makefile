@@ -12,4 +12,4 @@ $(TARGET): $(OBJFILES)
 	$(CC) $(CFLAGS) -o $(TARGET) $(OBJFILES)
 
 clean:
-	@rm -vf $(OBJFILES) $(TARGET) output.txt
+	@rm -vf $(TARGET) output.txt
