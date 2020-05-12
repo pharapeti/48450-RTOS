@@ -58,9 +58,12 @@ int main(int argc, char* argv[])
 		// Convert argument to integer (atio returns 0 if the argument is a string)
 		frameSize = atoi(argv[1]);
 
-		// Ensure that the frame size is greater than 1
+		// Ensure that the frame size is acceptable
 		if(frameSize < 1){
 			fprintf(stderr, "The specifed frame size must be a positive integer\n");
+			exit(EXIT_FAILURE);
+		} else if(frameSize > 25) {
+			fprintf(stderr, "The specifed frame size is too large. Use a smaller number.\n");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -139,6 +142,7 @@ int main(int argc, char* argv[])
 	}
 
 	//Sit here until the ctrl+c signal is given by the user.
+	printf("Finished... use control+c to view the results\n");
 	while(!terminateProgram)
 	{
 		sleep(1);
