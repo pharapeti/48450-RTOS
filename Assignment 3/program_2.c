@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
 
 		// Ensure that the frame size is acceptable
 		if(frameSize < 1){
-			fprintf(stderr, "The specifed frame size must be a positive integer\n");
+			fprintf(stderr, "The specifed frame size must be greater than zero.\n");
 			exit(EXIT_FAILURE);
 		} else if(frameSize > 25) {
 			fprintf(stderr, "The specifed frame size is too large. Use a smaller number.\n");
