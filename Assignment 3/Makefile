@@ -3,7 +3,7 @@
 
 CC = gcc
 CFLAGS := -Wall -pthread -O2
-OBJFILES = fifo.c program_2.c
+OBJFILES = queue.c program_2.c
 TARGET = program_2
 
 all: $(TARGET)

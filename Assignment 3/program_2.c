@@ -22,7 +22,7 @@ Assignment 3 Program_2 template
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <signal.h>
-#include "fifo.h"
+#include "queue.h"
 
 #define REFERENCE_STRING_LENGTH 24
 
@@ -68,8 +68,8 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	// Create fifo for algorithm
-	struct FIFO * fifo = createFIFO(frameSize);
+	// Create queue to track pages inserted into the frame
+	struct Queue * queue = createQueue(frameSize);
 	
 	//Reference string from the assignment outline
 	int referenceString[REFERENCE_STRING_LENGTH] = {7,0,1,2,0,3,0,4,2,3,0,3,0,3,2,1,2,0,1,7,0,1,7,5};
@@ -115,16 +115,16 @@ int main(int argc, char* argv[])
 
 			// If there is no space in the frame for a new page
 			if(emptyFramePos == -1){
-				//Get the page at the front of the FIFO
-				int frontOfFIFO = front(fifo);
+				//Get the page at the front of the queue
+				int frontOfQueue = front(queue);
 
-				//Remove the page at the front of the FIFO
-				dequeue(fifo);
+				//Remove the page at the front of the queue
+				dequeue(queue);
 
 				//Determine where to write new frame to
 				int writePos = -1;
 				for(int pos = 0; pos < frameSize; pos++){
-					if(frame[pos] == frontOfFIFO) { writePos = pos; }
+					if(frame[pos] == frontOfQueue) { writePos = pos; }
 				}
 
 				//Add new page to the frame
@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
 			}
 
 			// Add the page to the back of the queue
-			enqueue(fifo, currentValue);
+			enqueue(queue, currentValue);
 		}
 
 		printFrame(frame, frameSize, pageFaults);
