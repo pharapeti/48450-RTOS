@@ -24,6 +24,14 @@ Usage:
 #include<sys/stat.h>
 #include<fcntl.h>
 
+/* a struct to store data about each process */
+typedef struct {
+  int pid; // process id
+  float arrive_t, wait_t, burst_t, turnaround_t;
+  float start_t; // process time
+} process;
+
+
 /*------------------- variables ------------------------*/
 //Averages calculated
 float avg_wait_t = 0.0, avg_turnaround_t = 0.0;
@@ -31,7 +39,8 @@ float avg_wait_t = 0.0, avg_turnaround_t = 0.0;
 sem_t sem_SRTF;
 //Pthreads
 pthread_t processor, writer;
-
+int processNum = 7;
+process * processes;
 char * outputFileName = "output.txt";
 
 /*------------------- functions ------------------------*/
@@ -64,6 +73,31 @@ int main(int argc, char* argv[]){
 	if(argv[1] != NULL){ 
 		outputFileName = argv[1];
 	}
+
+	processes = malloc(sizeof(process) * processNum);
+	processes[0].pid = 1;
+	processes[0].arrive_t = 8;
+	processes[0].burst_t = 10;
+	processes[1].pid = 2;
+	processes[1].arrive_t = 10;
+	processes[1].burst_t = 3;
+	processes[2].pid = 3;
+	processes[2].arrive_t = 14;
+	processes[2].burst_t = 7;
+	processes[3].pid = 4;
+	processes[3].arrive_t = 9;
+	processes[3].burst_t = 5;
+	processes[4].pid = 5;
+	processes[4].arrive_t = 16;
+	processes[4].burst_t = 4;
+	processes[5].pid = 6;
+	processes[5].arrive_t = 21;
+	processes[5].burst_t = 6;
+	processes[6].pid = 7;
+	processes[6].arrive_t = 26;
+	processes[6].burst_t = 2;
+
+
 
 	if(sem_init(&sem_SRTF, 0, 0) != 0)
 	{
@@ -122,16 +156,27 @@ void writer_routine() {
 void calculate_average() {
 	avg_wait_t=100;
 	avg_turnaround_t=390;
-	int PROCESSNUM=7;
-
-	avg_wait_t /= PROCESSNUM;
-	avg_turnaround_t /= PROCESSNUM;
+	avg_wait_t /= processNum;
+	avg_turnaround_t /= processNum;
 }
 
 //Print results, taken from sample
 void print_results() {
 	printf("Write to FIFO: Average wait time: %fs\n", avg_wait_t);
 	printf("Write to FIFO: Average turnaround time: %fs\n", avg_turnaround_t);
+
+	printf("Process Schedule Table: \n");
+	printf("\tProcess ID\tArrival Time\tBurst Time\tWait Time\tTurnaround Time\n");
+	for (int i = 0; i < processNum; i++){
+		printf(
+			"\t%d\t\t%f\t%f\t%f\t%f\n",
+			processes[i].pid,
+			processes[i].arrive_t,
+			processes[i].burst_t,
+			processes[i].wait_t,
+			processes[i].turnaround_t
+		);
+	}
 }
 
 //Send and write average wait time and turnaround time to fifo
