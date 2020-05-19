@@ -1,8 +1,8 @@
 /*********************************************************
    ----- 48450 -- Program 1 by Patrice Harapeti ------
 This is a program calculates the average wait time and average turnaround time
-of processes when using the Shortest Remaining Time First (SRTF) algorithm CPU
-scheduling algorithm
+of processes in the ready state when using the Shortest Remaining Time First (SRTF)
+CPU scheduling algorithm.
 
 Compilation instructions:
 
@@ -18,7 +18,6 @@ Usage:
 #include <fcntl.h>
 #include <pthread.h>
 #include <semaphore.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -27,9 +26,23 @@ Usage:
 
 /* a struct to store data about each process */
 typedef struct {
-  int pid; // process id
-  float arrive_t, wait_t, burst_t, turnaround_t;
-  float start_t; // process time
+  // process id
+  int pid;
+
+  // time when the process arrives enters into the ready state and can be executed
+  float arrive_t;
+
+  // total time spent by the process in the ready state waiting for the CPU
+  float wait_t;
+
+  // total time taken by the process for its execution
+  float burst_t;
+
+  // total time spent by the process from being in the ready state for the first time to it's completion
+  float turnaround_t;
+
+  // time when the process beings execution
+  float start_t;
 } process;
 
 /* Sorts the processes in burst time order (bubble sort) */
@@ -53,13 +66,13 @@ char *outputFileName = "output.txt";
 char *namedFIFOname = "/tmp/myfifo1";
 
 /*------------------- functions ------------------------*/
-// Simple calculate average wait time and turnaround time function
-void calculate_average();
+// Performs the SRTF CPU Scheduling Algorithm to calculate average wait time and turnaround time
+void perform_srtf();
 
 // Send and write average wait time and turnaround time to fifo
 void send_FIFO();
 
-// Print results of SRTF algorithm
+// Print results of SRTF algorithm to the console
 void print_results();
 
 // Read average wait time and turnaround time from the named fifo then write to the output file
@@ -72,7 +85,6 @@ void processor_routine();
 void writer_routine();
 
 /*------------------- implementation ------------------------*/
-// main
 int main(int argc, char *argv[]) {
   // Ensure that the program has been invoked correctly
   if (argc < 1 || argc > 2) {
@@ -129,7 +141,7 @@ int main(int argc, char *argv[]) {
 
 // Processor Thread of assignment
 void processor_routine() {
-  calculate_average();
+  perform_srtf();
   print_results();
   send_FIFO();
 }
@@ -143,14 +155,13 @@ void writer_routine() {
   read_FIFO();
 }
 
-// Simple calculate average wait time and turnaround time function
-void calculate_average() {
+// Performs the SRTF CPU Scheduling Algorithm to calculate average wait time and turnaround time
+void perform_srtf() {
   time_residue = processes[0].arrive_t + 1;
   bubble_sort(processes, 0, processNum);
 
   for (int i = 0; i < processNum; i++) {
-    if (processes[i].arrive_t <=
-        Process_start) { // set the rest process' start time
+    if (processes[i].arrive_t <= Process_start) { // set the rest process' start time
       if (processes[i].arrive_t == 0) {
         Process_start -= time_residue;
       }
@@ -280,10 +291,10 @@ void read_FIFO() {
 }
 
 void bubble_sort(process p[], int start, int num) {
-  int i, j;
   process temp;
-  for (i = start; i < num; i++) {
-    for (j = i + 1; j < num; j++) {
+
+  for (int i = start; i < num; i++) {
+    for (int j = i + 1; j < num; j++) {
       if (p[i].burst_t > p[j].burst_t) {
         temp = p[i];
         p[i] = p[j];

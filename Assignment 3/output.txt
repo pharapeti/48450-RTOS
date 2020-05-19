@@ -1,0 +1,2 @@
+Read from FIFO: 13.000000s Average wait time
+Read from FIFO: 18.285715s Average turnaround time
