@@ -46,7 +46,7 @@ typedef struct {
 } process;
 
 /* Sorts the processes in burst time order (bubble sort) */
-void bubble_sort(process p[], int start, int num);
+void bubble_sort(process p[]);
 
 // SRTF variables
 float avg_wait_t = 0.0, avg_turnaround_t = 0.0;
@@ -158,7 +158,7 @@ void writer_routine() {
 // Performs the SRTF CPU Scheduling Algorithm to calculate average wait time and turnaround time
 void perform_srtf() {
   time_residue = processes[0].arrive_t + 1;
-  bubble_sort(processes, 0, processNum);
+  bubble_sort(processes);
 
   for (int i = 0; i < processNum; i++) {
     if (processes[i].arrive_t <= Process_start) { // set the rest process' start time
@@ -174,14 +174,16 @@ void perform_srtf() {
       	}
     }
 
-    /*-- set the global start time to the end of the process done time --*/
+    /* set the global start time to the end of the process done time */
     Process_start += processes[i].burst_t;
-    /*set the wait time as CPU start time minus process arrive time*/
+
+	/* set the wait time as CPU start time minus process arrive time */
     processes[i].wait_t = processes[i].start_t - processes[i].arrive_t;
 
     /* set turn around time as bust time plus wait time */
     processes[i].turnaround_t = processes[i].burst_t + processes[i].wait_t;
-    avg_wait_t += processes[i].wait_t;
+
+	avg_wait_t += processes[i].wait_t;
     avg_turnaround_t += processes[i].turnaround_t;
   }
 
@@ -290,11 +292,12 @@ void read_FIFO() {
   }
 }
 
-void bubble_sort(process p[], int start, int num) {
+void bubble_sort(process p[]) {
   process temp;
 
-  for (int i = start; i < num; i++) {
-    for (int j = i + 1; j < num; j++) {
+  // Sort processes in order of smallest to largest burst
+  for (int i = 0; i < processNum; i++) {
+    for (int j = i + 1; j < processNum; j++) {
       if (p[i].burst_t > p[j].burst_t) {
         temp = p[i];
         p[i] = p[j];
