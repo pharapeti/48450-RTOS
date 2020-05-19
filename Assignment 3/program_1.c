@@ -1,6 +1,16 @@
 /*********************************************************
-   ----- 48450 -- week 8 lab handout 3 ------
-This is a program to practice FIFO (named pipe) in multi threads.
+   ----- 48450 -- Program 1 ------
+This is a program calculates the average wait time and average turnaround time of processes
+when using the Shortest Remaining Time First (SRTF) algorithm CPU scheduling algorithm
+
+Compilation instructions:
+
+gcc -Wall -pthread -O2 -o program_1 program_1.c
+
+Usage:
+
+./program_1
+./program_1 <output filename>
 
 *********************************************************/
 
@@ -22,6 +32,8 @@ sem_t sem_SRTF;
 //Pthreads
 pthread_t processor, writer;
 
+char * outputFileName = "output.txt";
+
 /*------------------- functions ------------------------*/
 //Simple calculate average wait time and turnaround time function
 void calculate_average();
@@ -39,39 +51,52 @@ void writer_routine();
 
 /*------------------- implementation ------------------------*/
 //main
-int main(){
-	if(sem_init(&sem_SRTF, 0, 0)!=0)
-	{
-	    printf("semaphore initialize erro \n");
-	    return(-10);
+int main(int argc, char* argv[]){
+	// Ensure that the program has been invoked correctly
+  	if (argc < 1 || argc > 2) {
+		fprintf(stderr, "USAGE:\n");
+		fprintf(stderr, "./program_1.out\n");
+		fprintf(stderr, "./program_1.out <output filename>\n");
+		exit(EXIT_FAILURE);
 	}
 
-	if(pthread_create(&processor, NULL, (void *)processor_routine, NULL)!=0)
- 	{
-	    printf("Processor Thread created error\n");
-	    return -1;
+	// Override default output filename if argument is specified
+	if(argv[1] != NULL){ 
+		outputFileName = argv[1];
 	}
-	if(pthread_create(&writer, NULL, (void *)writer_routine, NULL)!=0)
+
+	if(sem_init(&sem_SRTF, 0, 0) != 0)
 	{
-	    printf("Writer thread created error\n");
-	    return -2;
+	    fprintf(stderr, "semaphore initialize error \n");
+	    exit(EXIT_FAILURE);
+	}
+
+	if(pthread_create(&processor, NULL, (void *) processor_routine, NULL)!=0)
+ 	{
+	    fprintf(stderr, "Processor Thread created error\n");
+	    exit(EXIT_FAILURE);
+	}
+	if(pthread_create(&writer, NULL, (void *) writer_routine, NULL)!=0)
+	{
+	    fprintf(stderr, "Writer thread created error\n");
+	    exit(EXIT_FAILURE);
 	}
 
 	if(pthread_join(processor, NULL)!=0)
 	{
-	    printf("join processor thread error\n");
-	    return -3;
+	    fprintf(stderr, "join processor thread error\n");
+	    exit(EXIT_FAILURE);
 	}
 	if(pthread_join(writer, NULL)!=0)
 	{
-	    printf("join writer thread error\n");
-	    return -4;
+	    fprintf(stderr, "join writer thread error\n");
+	    exit(EXIT_FAILURE);
 	}
 
 	if(sem_destroy(&sem_SRTF)!=0)
 	{
-	    printf("Semaphore destroy error\n");
-	    return -5;
+	    fprintf(stderr, "Semaphore destroy error\n");
+	    exit(EXIT_FAILURE);
 	}
 
 	return 0;
@@ -86,7 +111,10 @@ void processor_routine() {
 
 //Writer thread of assignment
 void writer_routine() {
-	sem_wait(&sem_SRTF);
+	if(sem_wait(&sem_SRTF) == -1){
+		fprintf(stderr, "semaphore lock error\n");
+		exit(EXIT_FAILURE);
+	}
 	read_FIFO();
 }
 
@@ -102,8 +130,8 @@ void calculate_average() {
 
 //Print results, taken from sample
 void print_results() {
-	printf("\nWrite to FIFO: Average wait time: %fs\n", avg_wait_t);
-	printf("\nWrite to FIFO: Average turnaround time: %fs\n", avg_turnaround_t);
+	printf("Write to FIFO: Average wait time: %fs\n", avg_wait_t);
+	printf("Write to FIFO: Average turnaround time: %fs\n", avg_turnaround_t);
 }
 
 //Send and write average wait time and turnaround time to fifo
@@ -112,22 +140,34 @@ void send_FIFO(){
 	char * myfifo = "/tmp/myfifo1";
 
 	if ((res = mkfifo(myfifo, 0777)) < 0) {
-		printf("mkfifo error\n");
-		exit(0);
+		fprintf(stderr, "mkfifo error\n");
+		exit(EXIT_FAILURE);
 	}
 
-	sem_post(&sem_SRTF);
+	if(sem_post(&sem_SRTF) == -1){
+		fprintf(stderr, "semaphore unlock error\n");
+		exit(EXIT_FAILURE);
+	}
 
 	if ((fifofd = open(myfifo, O_WRONLY)) < 0) {
-		printf("fifo open send error\n");
-		exit(0);
+		fprintf(stderr, "fifo open send error\n");
+		exit(EXIT_FAILURE);
 	}
 
-	write(fifofd, &avg_wait_t, sizeof(avg_wait_t));
-	write(fifofd, &avg_turnaround_t, sizeof(avg_turnaround_t));
+	if(write(fifofd, &avg_wait_t, sizeof(avg_wait_t)) == -1){
+		fprintf(stderr, "Cannot write to FIFO\n");
+		exit(EXIT_FAILURE);
+	}
 
-	close(fifofd);
-	unlink(myfifo);
+	if(write(fifofd, &avg_turnaround_t, sizeof(avg_turnaround_t)) == -1){
+		fprintf(stderr, "Cannot write to FIFO\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if(close(fifofd) == -1){
+		fprintf(stderr, "Cannot close FIFO\n");
+		exit(EXIT_FAILURE);
+	}
 }
 
 //Read average wait time and turnaround time from fifo then write to output.txt
@@ -137,29 +177,46 @@ void read_FIFO() {
 	char * myfifo = "/tmp/myfifo1";
 
 	if ((fifofd = open(myfifo, O_RDONLY)) < 0){
-		printf("fifo open read error\n");
-		exit(0);
+		fprintf(stderr, "fifo open read error\n");
+		exit(EXIT_FAILURE);
 	}
 
-	read(fifofd, &fifo_avg_wait_t, sizeof(int));
-	read(fifofd, &fifo_avg_turnaround_t, sizeof(int));
+	if(read(fifofd, &fifo_avg_wait_t, sizeof(int)) == -1){
+		fprintf(stderr, "Cannot read from FIFO\n");
+		exit(EXIT_FAILURE);
+	}
 
-	close(fifofd);
-	remove(myfifo);
+	if(read(fifofd, &fifo_avg_turnaround_t, sizeof(int)) == -1){
+		fprintf(stderr, "Cannot read from FIFO\n");
+		exit(EXIT_FAILURE);
+	}
 
-	printf("\nRead from FIFO: %fs Average wait time\n", fifo_avg_wait_t);
-	printf("\nRead from FIFO: %fs Average turnaround time\n", fifo_avg_turnaround_t);
+	if(close(fifofd) == -1){
+		fprintf(stderr, "Cannot close named FIFO\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if(remove(myfifo) == -1){
+		fprintf(stderr, "Cannot remove named FIFO\n");
+		exit(EXIT_FAILURE);
+	}
+
+	printf("Read from FIFO: %fs Average wait time\n", fifo_avg_wait_t);
+	printf("Read from FIFO: %fs Average turnaround time\n", fifo_avg_turnaround_t);
 
 	// Write to file
 	FILE *file_to_write;
-	char * file_name = "output.txt";
 
-	if((file_to_write = fopen(file_name, "w")) == NULL) {
-		printf("Error! opening file");
-		exit(1);
+	if((file_to_write = fopen(outputFileName, "w")) == NULL) {
+		fprintf(stderr, "Error! opening file");
+		exit(EXIT_FAILURE);
 	}
 
 	fprintf(file_to_write, "Read from FIFO: %fs Average wait time\n", fifo_avg_wait_t);
 	fprintf(file_to_write, "Read from FIFO: %fs Average turnaround time\n", fifo_avg_turnaround_t);
-	fclose(file_to_write);
+	
+	if(fclose(file_to_write) != 0){
+		fprintf(stderr, "Error closing stream");
+		exit(EXIT_FAILURE);
+	}
 }
