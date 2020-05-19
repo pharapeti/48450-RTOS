@@ -32,35 +32,43 @@ typedef struct {
   float start_t; // process time
 } process;
 
-void sort(process p[], int start, int num);
+/* Sorts the processes in burst time order (bubble sort) */
+void bubble_sort(process p[], int start, int num);
 
-/*------------------- variables ------------------------*/
-// Averages calculated
+// SRTF variables
 float avg_wait_t = 0.0, avg_turnaround_t = 0.0;
 int Process_start = 0;
 float time_residue;
-// Semaphore
-sem_t sem_SRTF;
-// Pthreads
-pthread_t processor, writer;
 int processNum = 7;
 process *processes;
+
+// Semaphore
+sem_t sem_SRTF;
+
+// Threads
+pthread_t processor, writer;
+
+//IO
 char *outputFileName = "output.txt";
+char *namedFIFOname = "/tmp/myfifo1";
 
 /*------------------- functions ------------------------*/
 // Simple calculate average wait time and turnaround time function
 void calculate_average();
-// Read average wait time and turnaround time from fifo then write to the output
-// filename
-void read_FIFO();
-// Print results, taken from sample
-void print_results();
+
 // Send and write average wait time and turnaround time to fifo
 void send_FIFO();
 
-// Processor Thread of assignment
+// Print results of SRTF algorithm
+void print_results();
+
+// Read average wait time and turnaround time from the named fifo then write to the output file
+void read_FIFO();
+
+// Routine for Processor Thread
 void processor_routine();
-// Writer thread of assignment
+
+// Routine for Writer thread
 void writer_routine();
 
 /*------------------- implementation ------------------------*/
@@ -80,27 +88,13 @@ int main(int argc, char *argv[]) {
   }
 
   processes = malloc(sizeof(process) * processNum);
-  processes[0].pid = 1;
-  processes[0].arrive_t = 8;
-  processes[0].burst_t = 10;
-  processes[1].pid = 2;
-  processes[1].arrive_t = 10;
-  processes[1].burst_t = 3;
-  processes[2].pid = 3;
-  processes[2].arrive_t = 14;
-  processes[2].burst_t = 7;
-  processes[3].pid = 4;
-  processes[3].arrive_t = 9;
-  processes[3].burst_t = 5;
-  processes[4].pid = 5;
-  processes[4].arrive_t = 16;
-  processes[4].burst_t = 4;
-  processes[5].pid = 6;
-  processes[5].arrive_t = 21;
-  processes[5].burst_t = 6;
-  processes[6].pid = 7;
-  processes[6].arrive_t = 26;
-  processes[6].burst_t = 2;
+  processes[0].pid = 1; processes[0].arrive_t = 8; processes[0].burst_t = 10;
+  processes[1].pid = 2; processes[1].arrive_t = 10; processes[1].burst_t = 3;
+  processes[2].pid = 3; processes[2].arrive_t = 14; processes[2].burst_t = 7;
+  processes[3].pid = 4; processes[3].arrive_t = 9; processes[3].burst_t = 5;
+  processes[4].pid = 5; processes[4].arrive_t = 16; processes[4].burst_t = 4;
+  processes[5].pid = 6; processes[5].arrive_t = 21; processes[5].burst_t = 6;
+  processes[6].pid = 7; processes[6].arrive_t = 26; processes[6].burst_t = 2;
 
   if (sem_init(&sem_SRTF, 0, 0) != 0) {
     fprintf(stderr, "semaphore initialize error \n");
@@ -152,7 +146,7 @@ void writer_routine() {
 // Simple calculate average wait time and turnaround time function
 void calculate_average() {
   time_residue = processes[0].arrive_t + 1;
-  sort(processes, 0, processNum);
+  bubble_sort(processes, 0, processNum);
 
   for (int i = 0; i < processNum; i++) {
     if (processes[i].arrive_t <=
@@ -187,12 +181,16 @@ void calculate_average() {
 // Print results, taken from sample
 void print_results() {
   printf("Process Schedule Table: \n");
-  printf(
-      "\tProcess ID\tArrival Time\tBurst Time\tWait Time\tTurnaround Time\n");
+  printf("\tProcess ID\tArrival Time\tBurst Time\tWait Time\tTurnaround Time\n");
   for (int i = 0; i < processNum; i++) {
-    printf("\t%d\t\t%f\t%f\t%f\t%f\n", processes[i].pid, processes[i].arrive_t,
-           processes[i].burst_t, processes[i].wait_t,
-           processes[i].turnaround_t);
+    printf(
+		"\t%d\t\t%f\t%f\t%f\t%f\n",
+		processes[i].pid,
+		processes[i].arrive_t,
+        processes[i].burst_t,
+		processes[i].wait_t,
+		processes[i].turnaround_t
+	);
   }
 
   printf("Average wait time of each process: %fs\n", avg_wait_t);
@@ -202,9 +200,8 @@ void print_results() {
 // Send and write average wait time and turnaround time to fifo
 void send_FIFO() {
   int res, fifofd;
-  char *myfifo = "/tmp/myfifo1";
 
-  if ((res = mkfifo(myfifo, 0777)) < 0) {
+  if ((res = mkfifo(namedFIFOname, 0777)) < 0) {
     fprintf(stderr, "mkfifo error\n");
     exit(EXIT_FAILURE);
   }
@@ -214,7 +211,7 @@ void send_FIFO() {
     exit(EXIT_FAILURE);
   }
 
-  if ((fifofd = open(myfifo, O_WRONLY)) < 0) {
+  if ((fifofd = open(namedFIFOname, O_WRONLY)) < 0) {
     fprintf(stderr, "fifo open send error\n");
     exit(EXIT_FAILURE);
   }
@@ -235,14 +232,12 @@ void send_FIFO() {
   }
 }
 
-// Read average wait time and turnaround time from fifo then write to the output
-// file
+// Read average wait time and turnaround time from fifo then write to the output file
 void read_FIFO() {
   int fifofd;
   float fifo_avg_turnaround_t, fifo_avg_wait_t;
-  char *myfifo = "/tmp/myfifo1";
 
-  if ((fifofd = open(myfifo, O_RDONLY)) < 0) {
+  if ((fifofd = open(namedFIFOname, O_RDONLY)) < 0) {
     fprintf(stderr, "fifo open read error\n");
     exit(EXIT_FAILURE);
   }
@@ -262,7 +257,7 @@ void read_FIFO() {
     exit(EXIT_FAILURE);
   }
 
-  if (remove(myfifo) == -1) {
+  if (remove(namedFIFOname) == -1) {
     fprintf(stderr, "Cannot remove named FIFO\n");
     exit(EXIT_FAILURE);
   }
@@ -284,7 +279,7 @@ void read_FIFO() {
   }
 }
 
-void sort(process p[], int start, int num) {
+void bubble_sort(process p[], int start, int num) {
   int i, j;
   process temp;
   for (i = start; i < num; i++) {
