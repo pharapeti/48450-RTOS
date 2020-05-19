@@ -1,5 +1,5 @@
 /*********************************************************
-   ----- 48450 -- Program 1 ------
+   ----- 48450 -- Program 1 by Patrice Harapeti ------
 This is a program calculates the average wait time and average turnaround time of processes
 when using the Shortest Remaining Time First (SRTF) algorithm CPU scheduling algorithm
 
@@ -37,7 +37,7 @@ char * outputFileName = "output.txt";
 /*------------------- functions ------------------------*/
 //Simple calculate average wait time and turnaround time function
 void calculate_average();
-//Read average wait time and turnaround time from fifo then write to output.txt
+//Read average wait time and turnaround time from fifo then write to the output filename
 void read_FIFO();
 //Print results, taken from sample
 void print_results();
@@ -170,7 +170,7 @@ void send_FIFO(){
 	}
 }
 
-//Read average wait time and turnaround time from fifo then write to output.txt
+//Read average wait time and turnaround time from fifo then write to the output file
 void read_FIFO() {
 	int fifofd;
 	float fifo_avg_turnaround_t, fifo_avg_wait_t;
