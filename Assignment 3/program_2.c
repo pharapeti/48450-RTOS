@@ -1,16 +1,34 @@
-/**********************************************************************************
+/*********************************************************
+   ----- 48450 -- Program 2 by Patrice Harapeti ------
 
-This is a template for the subject of RTOS in University of Technology Sydney(UTS)
-Please complete the code based on the assignment requirement.
+Description:
 
-Assignment 3 Program_2 template
+This program demonstrates the First in First Out Page Replacement Algorithm.
+The program tracks the current frame and current number of page faults throughout the program.
+After the algorithm has finished processing, the user must use the Control+C keyboard command
+to proceed to the results section of the program.
 
-**********************************************************************************/
-/*
-  To compile prog_1 ensure that gcc is installed and run the following command:
-  gcc -Wall -O2 program_2.c -o prog_2 -lpthread -lrt
+The program outputs:
+- The total number of page faults
+- The frame size entered by the user (or the default which is 4)
+- The reference string length
+- The fault percentage
 
-*/
+Compilation instructions:
+
+make
+
+Cleanup:
+
+make clean
+
+Usage:
+
+./program_2
+./program_2 <frame size>
+
+*********************************************************/
+
 #include <stdio.h>
 #include <pthread.h>
 #include <string.h>
@@ -26,9 +44,10 @@ Assignment 3 Program_2 template
 
 #define REFERENCE_STRING_LENGTH 24
 
-//Function prototypes
+// Function which is called when the SIGINT interrupt is raised
 void SignalHandler(int signal);
 
+// Prints the current pages in the frame as well as the current number of page faults
 void printFrame(int frame[], int frameSize, int noOfFaults);
 
 //Current number of page faults in the program
@@ -72,6 +91,7 @@ int main(int argc, char* argv[])
 	struct Queue * queue = createQueue(frameSize);
 	
 	//Reference string from the assignment outline
+	// NOTE: This reference string contains 7 distinct numbers
 	int referenceString[REFERENCE_STRING_LENGTH] = {7,0,1,2,0,3,0,4,2,3,0,3,0,3,2,1,2,0,1,7,0,1,7,5};
 	
 	//Boolean value for whether there is a match or not.
@@ -160,6 +180,7 @@ int main(int argc, char* argv[])
 
 void SignalHandler(int signal)
 {
+	// Set flag so the main function can continue to the results section
 	terminateProgram = true;
 }
 
@@ -172,8 +193,10 @@ void printFrame(int frame[], int frameSize, int noOfFaults){
 		val = frame[i];
 
 		if(val == -1){
-			strcat(message, " |");
+			// Empty page in frame
+			strcat(message, ".|");
 		} else {
+			// Occupied page in frame
 			char str[64];
 			sprintf(str, "%i|", val);
 			strcat(message, str);
