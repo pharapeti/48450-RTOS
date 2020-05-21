@@ -1,6 +1,9 @@
 /*********************************************************
    ----- 48450 -- Program 1 by Patrice Harapeti ------
-This is a program calculates the average wait time and average turnaround time
+
+Description:
+
+This program calculates the average wait time and average turnaround time
 of processes in the ready state when using the Shortest Remaining Time First (SRTF)
 CPU scheduling algorithm.
 
@@ -100,6 +103,12 @@ int main(int argc, char *argv[]) {
   }
 
   processes = malloc(sizeof(process) * processNum);
+
+  if(processes == NULL){
+	fprintf("error allocating memory\n");
+	exit(EXIT_FAILURE);
+  }
+
   processes[0].pid = 1; processes[0].arrive_t = 8; processes[0].burst_t = 10;
   processes[1].pid = 2; processes[1].arrive_t = 10; processes[1].burst_t = 3;
   processes[2].pid = 3; processes[2].arrive_t = 14; processes[2].burst_t = 7;
