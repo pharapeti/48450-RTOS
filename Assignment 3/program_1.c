@@ -105,8 +105,8 @@ int main(int argc, char *argv[]) {
   processes = malloc(sizeof(process) * processNum);
 
   if(processes == NULL){
-	fprintf("error allocating memory\n");
-	exit(EXIT_FAILURE);
+    fprintf(stderr, "error allocating memory\n");
+    exit(EXIT_FAILURE);
   }
 
   processes[0].pid = 1; processes[0].arrive_t = 8; processes[0].burst_t = 10;
