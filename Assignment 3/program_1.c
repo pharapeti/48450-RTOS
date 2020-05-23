@@ -192,7 +192,7 @@ void perform_srtf() {
     /* set turn around time as bust time plus wait time */
     processes[i].turnaround_t = processes[i].burst_t + processes[i].wait_t;
 
-	avg_wait_t += processes[i].wait_t;
+	  avg_wait_t += processes[i].wait_t;
     avg_turnaround_t += processes[i].turnaround_t;
   }
 
