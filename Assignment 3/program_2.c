@@ -104,9 +104,9 @@ int main(int argc, char* argv[])
 	int currentValue;
 
 	//Frame where we will be storing the references. -1 is equivalent to an empty value
-	int frame[REFERENCE_STRING_LENGTH];
+	int frame[frameSize];
 
-	for(int x = 0; x < REFERENCE_STRING_LENGTH; x++){
+	for(int x = 0; x < frameSize; x++){
 		frame[x] = -1;
 	}
 
