@@ -48,6 +48,7 @@ typedef struct {
   // time when the process beings execution
   float start_t;
 
+  // time remaining until the process has been fully executed
   float remaining_burst_t;
 } process;
 
@@ -102,6 +103,7 @@ int main(int argc, char *argv[]) {
     outputFileName = argv[1];
   }
 
+  // Pre-allocate memory for ease 
   processes = malloc(sizeof(process) * processNum);
 
   if(processes == NULL){
@@ -109,6 +111,7 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
+  // Define processes
   processes[0].pid = 1; processes[0].arrive_t = 8; processes[0].burst_t = 10; processes[0].remaining_burst_t = 10; 
   processes[1].pid = 2; processes[1].arrive_t = 10; processes[1].burst_t = 3; processes[1].remaining_burst_t = 3;
   processes[2].pid = 3; processes[2].arrive_t = 14; processes[2].burst_t = 7; processes[2].remaining_burst_t = 7;
@@ -241,31 +244,37 @@ void print_results() {
 void send_FIFO() {
   int res, fifofd;
 
+  // Create named pipe in local file system with 0777 permissions
   if ((res = mkfifo(namedFIFOname, 0777)) < 0) {
     fprintf(stderr, "mkfifo error\n");
     exit(EXIT_FAILURE);
   }
 
+  // Unlock the semaphore and allow the Writer thread to open the named pipe
   if (sem_post(&sem_SRTF) == -1) {
     fprintf(stderr, "semaphore unlock error\n");
     exit(EXIT_FAILURE);
   }
 
+  // Open named pipe in write-only mode
   if ((fifofd = open(namedFIFOname, O_WRONLY)) < 0) {
     fprintf(stderr, "fifo open send error\n");
     exit(EXIT_FAILURE);
   }
 
+  // Write average wait time into named pipe
   if (write(fifofd, &avg_wait_t, sizeof(avg_wait_t)) == -1) {
     fprintf(stderr, "Cannot write to FIFO\n");
     exit(EXIT_FAILURE);
   }
 
+  // Write average turnaround time into named pipe
   if (write(fifofd, &avg_turnaround_t, sizeof(avg_turnaround_t)) == -1) {
     fprintf(stderr, "Cannot write to FIFO\n");
     exit(EXIT_FAILURE);
   }
 
+  // Close (write-only) named pipe
   if (close(fifofd) == -1) {
     fprintf(stderr, "Cannot close FIFO\n");
     exit(EXIT_FAILURE);
@@ -277,26 +286,31 @@ void read_FIFO() {
   int fifofd;
   float fifo_avg_turnaround_t, fifo_avg_wait_t;
 
+  // Open named pipe in readonly mode
   if ((fifofd = open(namedFIFOname, O_RDONLY)) < 0) {
     fprintf(stderr, "fifo open read error\n");
     exit(EXIT_FAILURE);
   }
 
+  // Read average wait time from named pipe
   if (read(fifofd, &fifo_avg_wait_t, sizeof(int)) == -1) {
     fprintf(stderr, "Cannot read from FIFO\n");
     exit(EXIT_FAILURE);
   }
 
+  // Read average turnaround time from named pipe
   if (read(fifofd, &fifo_avg_turnaround_t, sizeof(int)) == -1) {
     fprintf(stderr, "Cannot read from FIFO\n");
     exit(EXIT_FAILURE);
   }
 
+  // Close (readonly) named pipe
   if (close(fifofd) == -1) {
     fprintf(stderr, "Cannot close named FIFO\n");
     exit(EXIT_FAILURE);
   }
 
+  // Remove named pipe from file system
   if (remove(namedFIFOname) == -1) {
     fprintf(stderr, "Cannot remove named FIFO\n");
     exit(EXIT_FAILURE);
@@ -305,14 +319,17 @@ void read_FIFO() {
   // Write to file
   FILE *file_to_write;
 
+  // Open or create the output file
   if ((file_to_write = fopen(outputFileName, "w")) == NULL) {
     fprintf(stderr, "Error! opening file");
     exit(EXIT_FAILURE);
   }
 
-  fprintf(file_to_write, "Read from FIFO: %fs Average wait time\n", fifo_avg_wait_t);
-  fprintf(file_to_write, "Read from FIFO: %fs Average turnaround time\n", fifo_avg_turnaround_t);
+  // Write results of SRTF algorithm to file
+  fprintf(file_to_write, "Average wait time: %fs\n", fifo_avg_wait_t);
+  fprintf(file_to_write, "Average turnaround time: %fs", fifo_avg_turnaround_t);
 
+  // Close file
   if (fclose(file_to_write) != 0) {
     fprintf(stderr, "Error closing stream");
     exit(EXIT_FAILURE);
