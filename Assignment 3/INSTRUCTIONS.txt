@@ -1,0 +1,23 @@
+Program 1:
+
+Compilation instructions:
+
+gcc -Wall -pthread -O2 -o program_1 program_1.c
+
+Usage:
+
+./program_1
+./program_1 <output filename>
+
+-----------------------------------------------------------
+
+Program 2:
+
+Compilation instructions:
+
+make
+
+Usage:
+
+./program_2
+./program_2 <frame size>
