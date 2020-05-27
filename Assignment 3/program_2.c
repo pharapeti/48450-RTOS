@@ -10,7 +10,7 @@ to proceed to the results section of the program.
 
 The program outputs:
 - The total number of page faults
-- The frame size entered by the user (or the default which is 4)
+- The frame size entered by the user (or the default - which is 4)
 - The reference string length
 - The fault percentage
 
@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
 	struct Queue * queue = createQueue(frameSize);
 	
 	//Reference string from the assignment outline
-	// NOTE: This reference string contains 7 distinct numbers
+	// NOTE: This reference string contains following 7 distinct numbers: 0, 1, 2, 3, 4, 5, 7
 	int referenceString[REFERENCE_STRING_LENGTH] = {7,0,1,2,0,3,0,4,2,3,0,3,0,3,2,1,2,0,1,7,0,1,7,5};
 	
 	//Boolean value for whether there is a match or not.
@@ -106,6 +106,7 @@ int main(int argc, char* argv[])
 	//Frame where we will be storing the references. -1 is equivalent to an empty value
 	int frame[frameSize];
 
+	// Initialise frame with default values
 	for(int x = 0; x < frameSize; x++){
 		frame[x] = -1;
 	}
@@ -121,13 +122,14 @@ int main(int argc, char* argv[])
 		emptyFramePos = -1;
 		currentValue = referenceString[i];
 
+		// Search for an empty position in the frame and for a direct match
 		for(int j = 0; j < frameSize; j++){
 			if(currentValue == frame[j]){ match = true; }
 			if(frame[j] == -1) { emptyFramePos = j; }
 		}
 
 		if(match){
-			// Don't need to do anything - the page is already in the frame
+			// Don't need to do anything as the page is already in the frame
 			// just continue onto the next page from the reference string
 		} else{
 			// Increment page fault as the page is not in the frame
@@ -162,7 +164,7 @@ int main(int argc, char* argv[])
 	}
 
 	//Sit here until the ctrl+c signal is given by the user.
-	printf("Finished... use control+c to view the results\n");
+	printf("\nFinished processing... use Control+c to view the results\n");
 	while(!terminateProgram)
 	{
 		sleep(1);
@@ -173,7 +175,7 @@ int main(int argc, char* argv[])
 	printf("Frame size: %i\n", frameSize);
 	printf("Reference string length: %i\n", REFERENCE_STRING_LENGTH);
 
-	float faultPercentage = ((float) pageFaults / (float) REFERENCE_STRING_LENGTH) * 100;
+	float faultPercentage = ((float) pageFaults / (float) REFERENCE_STRING_LENGTH) * 100; // calculate percentage
 	printf("Fault percentage: %.2f%%\n", ((signed long)(faultPercentage * 100) * 0.01f));
 	return 0;
 }
@@ -204,7 +206,7 @@ void printFrame(int frame[], int frameSize, int noOfFaults){
 	}
 
 	char * pageFaultMessage = malloc(128 * sizeof(char));
-	sprintf(pageFaultMessage, " Page fault count: %i\n", noOfFaults);
+	sprintf(pageFaultMessage, " Current Page fault count: %i\n", noOfFaults);
 	strcat(message, pageFaultMessage);
 	printf("%s", message);
 
